@@ -31,6 +31,7 @@
 #include "list.h"
 #include "debug.h"
 #include "buffer.h"
+#include "vfs.h"
 #include "libmount.h"
 
 #include "mountutils.h"
@@ -162,9 +163,6 @@ extern struct libmnt_fs *mnt_table_get_fs_root(struct libmnt_table *tb,
 extern int __mnt_table_is_fs_mounted(	struct libmnt_table *tb,
 					struct libmnt_fs *fstab_fs,
 					const char *tgt_prefix);
-
-extern int mnt_table_enable_noautofs(struct libmnt_table *tb, int ignore);
-extern int mnt_table_is_noautofs(struct libmnt_table *tb);
 
 /* tab_listmount.c */
 extern int mnt_table_next_lsmnt(struct libmnt_table *tb, int direction);
@@ -327,6 +325,7 @@ struct libmnt_table {
 	char		*comm_tail;	/* Last comment in file */
 
 	struct libmnt_cache *cache;		/* canonicalized paths/tags cache */
+	const struct ul_vfs_ops *vfs;		/* borrowed VFS ops (not owned) */
 
         int		(*errcb)(struct libmnt_table *tb,
 				 const char *filename, int line);
@@ -477,6 +476,7 @@ struct libmnt_context
 	const void	*mountdata;	/* final mount(2) data, string or binary data */
 
 	struct libmnt_cache	*cache;		/* paths cache */
+	struct ul_vfs_ops	*vfs;		/* pluggable I/O ops (owned, or NULL) */
 	struct libmnt_lock	*lock;		/* utab lock */
 	struct libmnt_update	*update;	/* utab update */
 

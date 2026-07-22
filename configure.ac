@@ -701,6 +701,7 @@ AC_CHECK_FUNCS([updwtmpx updwtmpx], [have_gnu_utmpx=yes], [have_gnu_utmpx=no])
 AC_CHECK_FUNCS([statx], [have_statx=yes], [have_statx=no])
 
 AM_CONDITIONAL([HAVE_OPENAT], [test "x$have_openat" = xyes])
+AM_CONDITIONAL([HAVE_SYS_PRCTL_H], [test "x$ac_cv_header_sys_prctl_h" = xyes])
 AM_CONDITIONAL([HAVE_LINUX_LANDLOCK_H], [test "x$ac_cv_header_linux_landlock_h" = xyes])
 
 have_setns_syscall="yes"
@@ -2032,7 +2033,11 @@ AS_IF([test "x$build_enosys" = xyes], [
 ])
 AM_CONDITIONAL([BUILD_ENOSYS], [test "x$build_enosys" = xyes])
 
-UL_BUILD_INIT([lsclocks], [check])
+AC_ARG_ENABLE([lsclocks],
+  AS_HELP_STRING([--disable-lsclocks], [do not build lsclocks]),
+  [], [UL_DEFAULT_ENABLE([lsclocks], [check])]
+)
+UL_BUILD_INIT([lsclocks])
 UL_REQUIRES_LINUX([lsclocks])
 UL_REQUIRES_BUILD([lsclocks], [libsmartcols])
 AM_CONDITIONAL([BUILD_LSCLOCKS], [test "x$build_lsclocks" = xyes])
@@ -3071,7 +3076,6 @@ AC_ARG_WITH([cryptsetup],
 
 AS_IF([test "x$with_cryptsetup" = xno], [
   AM_CONDITIONAL([HAVE_CRYPTSETUP], [false])
-  AM_CONDITIONAL([CRYPTSETUP_VIA_DLOPEN], [false])
 ], [
   PKG_CHECK_MODULES([CRYPTSETUP], [libcryptsetup],
 	[AC_DEFINE([HAVE_CRYPTSETUP], [1], [Define if cryptsetup is available])
@@ -3084,21 +3088,11 @@ AS_IF([test "x$with_cryptsetup" = xno], [
 	 AC_CHECK_LIB([cryptsetup], [crypt_activate_by_signed_key], [
 	  AC_DEFINE([HAVE_CRYPT_ACTIVATE_BY_SIGNED_KEY], [1], [Define if crypt_activate_by_signed_key exist in -lcryptsetup])
 	 ])
-	 AS_IF([test "x$with_cryptsetup" = xdlopen], [
-	  LIBS="-ldl $LIBS"
-	  AC_CHECK_LIB([dl], [dlsym], [
-	    AC_DEFINE([CRYPTSETUP_VIA_DLOPEN], [1], [Define if cryptsetup is to be loaded via dlopen])
-	    AM_CONDITIONAL([CRYPTSETUP_VIA_DLOPEN], [true])
-	   ], [AC_MSG_ERROR([libdl required to build with cryptsetup support])])
-	 ], [
-	  AM_CONDITIONAL([CRYPTSETUP_VIA_DLOPEN], [false])
-	 ])
 	 CFLAGS="$SAVE_CFLAGS"
 	 LIBS="$SAVE_LIBS"
 	 have_cryptsetup=yes],
 	[have_cryptsetup=no
    AM_CONDITIONAL([HAVE_CRYPTSETUP], [false])
-   AM_CONDITIONAL([CRYPTSETUP_VIA_DLOPEN], [false])
   ])
 
   AS_CASE([$with_cryptsetup:$have_cryptsetup],

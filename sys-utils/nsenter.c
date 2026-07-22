@@ -37,7 +37,7 @@
 #endif
 
 #ifdef HAVE_LIBSELINUX
-# include <selinux/selinux.h>
+# include "dl-selinux.h"
 #endif
 
 #ifndef HAVE_ENVIRON_DECL
@@ -475,7 +475,7 @@ static void open_cgroup_procs(void)
 
 	open_target_fd(&cgroup_fd, "cgroup", optarg);
 
-	if (read_all_alloc(cgroup_fd, &buf) < 1)
+	if (ul_read_all_alloc(cgroup_fd, &buf) < 1)
 		err(EXIT_FAILURE, _("failed to get cgroup path"));
 
 	p = strtok(buf, "\n");
@@ -512,7 +512,7 @@ static void join_into_cgroup(void)
 
 	pid = getpid();
 	len = snprintf(buf, sizeof(buf), "%zu", (size_t) pid);
-	if (write_all(cgroup_procs_fd, buf, len))
+	if (ul_write_all(cgroup_procs_fd, buf, len))
 		err(EXIT_FAILURE, _("write cgroup.procs failed"));
 }
 
@@ -765,17 +765,17 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef HAVE_LIBSELINUX
-	if (selinux && is_selinux_enabled() > 0) {
+	if (selinux && ul_dlopen_libselinux() == 0 && selinux_call(is_selinux_enabled)() > 0) {
 		char *scon = NULL;
 
 		if (!namespace_target_pid)
 			errx(EXIT_FAILURE, _("no target PID specified for --follow-context"));
-		if (getpidcon(namespace_target_pid, &scon) < 0)
+		if (selinux_call(getpidcon)(namespace_target_pid, &scon) < 0)
 			errx(EXIT_FAILURE, _("failed to get %d SELinux context"),
 					(int) namespace_target_pid);
-		if (setexeccon(scon) < 0)
+		if (selinux_call(setexeccon)(scon) < 0)
 			errx(EXIT_FAILURE, _("failed to set exec context to '%s'"), scon);
-		freecon(scon);
+		selinux_call(freecon)(scon);
 	}
 #endif
 

@@ -305,12 +305,12 @@ static void backup_sectors(struct sfdisk *sf,
 	} else {
 		unsigned char *buf = xmalloc(size);
 
-		if (read_all(devfd, (char *) buf, size) != (ssize_t) size) {
+		if (ul_read_all(devfd, (char *) buf, size) != (ssize_t) size) {
 			fdisk_warn(sf->cxt, _("cannot read %s"), devname);
 			free(buf);
 			goto fail;
 		}
-		if (write_all(fd, buf, size) != 0) {
+		if (ul_write_all(fd, buf, size) != 0) {
 			fdisk_warn(sf->cxt, _("cannot write %s"), fname);
 			free(buf);
 			goto fail;
@@ -548,7 +548,7 @@ static int move_partition_data(struct sfdisk *sf, size_t partno, struct fdisk_pa
 		if (!sf->noact) {
 			/* read source */
 			if (lseek(fd, src, SEEK_SET) == (off_t) -1 ||
-			    read_all(fd, buf, step_bytes) != (ssize_t) step_bytes) {
+			    ul_read_all(fd, buf, step_bytes) != (ssize_t) step_bytes) {
 				if (f)
 					fprintf(f, "%05zu: read error %12ju %12ju\n", cc, src, dst);
 				fdisk_warn(sf->cxt,
@@ -559,7 +559,7 @@ static int move_partition_data(struct sfdisk *sf, size_t partno, struct fdisk_pa
 
 			/* write target */
 			if (lseek(fd, dst, SEEK_SET) == (off_t) -1 ||
-			    write_all(fd, buf, step_bytes) != 0) {
+			    ul_write_all(fd, buf, step_bytes) != 0) {
 				if (f)
 					fprintf(f, "%05zu: write error %12ju %12ju\n", cc, src, dst);
 				fdisk_warn(sf->cxt,
@@ -1139,6 +1139,8 @@ static void assign_device_partition(struct sfdisk *sf,
 	if (partno > n)
 		errx(EXIT_FAILURE, _("%s: partition %zu: partition table contains "
 				     "only %zu partitions"), devname, partno, n);
+	if (partno == 0)
+		errx(EXIT_FAILURE, _("%s: partition number must be a positive number"), devname);
 	if (!fdisk_is_partition_used(sf->cxt, partno - 1))
 		errx(EXIT_FAILURE, _("%s: partition %zu: partition is unused"),
 				devname, partno);
@@ -1523,6 +1525,7 @@ static void sfdisk_print_partition(struct sfdisk *sf, size_t n)
 {
 	struct fdisk_partition *pa = NULL;
 	char *data;
+	int rc;
 
 	assert(sf);
 
@@ -1531,20 +1534,35 @@ static void sfdisk_print_partition(struct sfdisk *sf, size_t n)
 	if (fdisk_get_partition(sf->cxt, n, &pa) != 0)
 		return;
 
-	fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_DEVICE, &data);
-	printf("%12s : ", data);
+	rc = fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_DEVICE, &data);
+	if (rc == 0) {
+		printf("%12s : ", data);
+		free(data);
+	}
 
-	fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_START, &data);
-	printf("%12s ", data);
+	rc = fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_START, &data);
+	if (rc == 0) {
+		printf("%12s ", data);
+		free(data);
+	}
 
-	fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_END, &data);
-	printf("%12s ", data);
+	rc = fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_END, &data);
+	if (rc == 0) {
+		printf("%12s ", data);
+		free(data);
+	}
 
-	fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_SIZE, &data);
-	printf("(%s) ", data);
+	rc = fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_SIZE, &data);
+	if (rc == 0) {
+		printf("(%s) ", data);
+		free(data);
+	}
 
-	fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_TYPE, &data);
-	printf("%s\n", data);
+	rc = fdisk_partition_to_string(pa, sf->cxt, FDISK_FIELD_TYPE, &data);
+	if (rc == 0) {
+		printf("%s\n", data);
+		free(data);
+	}
 
 	fdisk_unref_partition(pa);
 }

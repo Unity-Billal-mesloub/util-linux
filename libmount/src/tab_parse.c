@@ -844,7 +844,7 @@ int mnt_table_parse_file(struct libmnt_table *tb, const char *filename)
 	if (!filename || !tb)
 		return -EINVAL;
 
-	f = fopen(filename, "r" UL_CLOEXECSTR);
+	f = ul_vfs_fopen(tb->vfs, filename, "r" UL_CLOEXECSTR);
 	if (f) {
 		rc = mnt_table_parse_stream(tb, f, filename);
 		fclose(f);
@@ -1082,12 +1082,16 @@ int mnt_table_set_parser_fltrcb(struct libmnt_table *tb,
 	return 0;
 }
 
-/*
+/**
  * mnt_table_enable_noautofs:
  * @tb: table
  * @ignore: ignore or don't ignore
  *
  * Enable/disable ignore autofs mount table entries on reading.
+ *
+ * Returns: 0 on success or negative number in case of error.
+ *
+ * Since: 2.38
  */
 int mnt_table_enable_noautofs(struct libmnt_table *tb, int ignore)
 {
@@ -1097,11 +1101,13 @@ int mnt_table_enable_noautofs(struct libmnt_table *tb, int ignore)
 	return 0;
 }
 
-/*
+/**
  * mnt_table_is_noautofs:
  * @tb: table
  *
- * Return the the enabled status of ignore autofs mount table entries.
+ * Returns: 1 if autofs entries are ignored, 0 otherwise.
+ *
+ * Since: 2.38
  */
 int mnt_table_is_noautofs(struct libmnt_table *tb)
 {
@@ -1151,6 +1157,34 @@ int mnt_table_parse_swaps(struct libmnt_table *tb, const char *filename)
 	}
 
 	tb->fmt = MNT_FMT_SWAPS;
+
+	return mnt_table_parse_file(tb, filename);
+}
+
+/**
+ * mnt_table_parse_utab:
+ * @tb: table
+ * @filename: overwrites default or NULL (recommended)
+ *
+ * This function parses the utab file and appends new lines to the @tb. The utab
+ * is a private libmount file that stores userspace mount options. The file
+ * location and format are library implementation details and subject to change;
+ * use NULL as @filename to let the library determine the correct path.
+ *
+ * Returns: 0 on success or negative number in case of error.
+ *
+ * Since: 2.43
+ */
+int mnt_table_parse_utab(struct libmnt_table *tb, const char *filename)
+{
+	if (!tb)
+		return -EINVAL;
+	if (!filename)
+		filename = mnt_get_utab_path();
+	if (!filename || is_file_empty(filename))
+		return 0;
+
+	tb->fmt = MNT_FMT_UTAB;
 
 	return mnt_table_parse_file(tb, filename);
 }
