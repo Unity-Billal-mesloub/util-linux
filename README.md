@@ -78,7 +78,7 @@ SOURCE CODE:
 
     Web interfaces:
 	  https://git.kernel.org/cgit/utils/util-linux/util-linux.git
-	  https://github.com/util-linux/util-linux
+	  https://github.com/Unity-Billal-mesloub/util-linux
 
       Note: the GitHub repository may contain temporary development branches too.
 
